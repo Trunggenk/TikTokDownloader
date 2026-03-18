@@ -9,6 +9,22 @@ from src.testers.params import Params
 from src.interface.detail import Detail
 from src.extract.extractor import Extractor
 from src.downloader.download import Downloader
+from src.custom.internal import DOWNLOAD_HEADERS
+
+
+# Tạo một mock Console để vá lỗi không có hàm warning của thư viện rich
+class MockConsole:
+    def print(self, *args, **kwargs):
+        pass
+
+    def warning(self, *args, **kwargs):
+        print("Cảnh báo:", *args)
+
+    def error(self, *args, **kwargs):
+        print("Lỗi:", *args)
+
+    def info(self, *args, **kwargs):
+        print("Thông tin:", *args)
 
 
 # Tạo một mock recorder giả để phục vụ DownloadRecorder vì chạy bên ngoài framework cần Database
@@ -52,8 +68,21 @@ async def download_single_video(url_or_id: str):
         params.truncate = 50
         params.recorder = MockRecorder()
 
+        # Cài đặt cookie của bạn vào Request Headers
+        # Mặc định script sẽ lấy Cookie từ Params (thường cấu hình trong file test_cookie.ini)
+        # Ở đây tôi ví dụ đặt một biến string trống, nếu bạn có Cookie, hãy dán vào đây:
+        user_cookie = ""
+
+        if user_cookie:
+            params.headers["Cookie"] = user_cookie
+            params.cookie_str = user_cookie
+        params.headers_download = DOWNLOAD_HEADERS  # Sửa Header tải về Douyin
+        params.headers_download_tiktok = params.headers_download
+        params.proxy_tiktok = params.proxy
+        params.console = MockConsole()  # Mock Console
+
         # 1. Gọi API lấy dữ liệu thô của Douyin
-        detail_api = Detail(params, detail_id=video_id)
+        detail_api = Detail(params, cookie=user_cookie, detail_id=video_id)
         raw_data = await detail_api.run()
 
         if not raw_data:
